@@ -117,7 +117,13 @@ export const Calculator: React.FC = () => {
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-black/60 backdrop-blur-sm">
           <div
             className="fixed inset-0"
+            role="button"
+            tabIndex={0}
+            aria-label="Close calculation history drawer"
             onClick={() => setIsMobileHistoryOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Enter') setIsMobileHistoryOpen(false);
+            }}
           ></div>
           <div className="relative z-10 bg-slate-900 rounded-t-3xl border-t border-slate-700 p-5 max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-200 shadow-2xl">
             <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4"></div>

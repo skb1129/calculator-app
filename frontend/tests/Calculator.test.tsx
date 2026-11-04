@@ -99,4 +99,21 @@ describe('Calculator Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'All clear' }));
     expect(input.value).toBe('');
   });
+
+  it('toggles mobile history drawer when button is clicked', () => {
+    render(<Calculator />);
+
+    // Click to open drawer
+    const openDrawerBtn = screen.getByRole('button', { name: /History \(\d+\)/i });
+    expect(openDrawerBtn).toBeInTheDocument();
+    fireEvent.click(openDrawerBtn);
+
+    // Close button should now be present
+    const closeDrawerBtn = screen.getByRole('button', { name: 'Close calculation history drawer' });
+    expect(closeDrawerBtn).toBeInTheDocument();
+
+    // Click to close
+    fireEvent.click(closeDrawerBtn);
+    expect(screen.queryByRole('button', { name: 'Close calculation history drawer' })).not.toBeInTheDocument();
+  });
 });

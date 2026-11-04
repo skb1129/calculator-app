@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -328,5 +330,63 @@ func TestCalculateHandlerCORS(t *testing.T) {
 	allowOrigin := w.Header().Get("Access-Control-Allow-Origin")
 	if allowOrigin != "*" {
 		t.Errorf("expected Access-Control-Allow-Origin *, got %s", allowOrigin)
+	}
+}
+
+func TestHealthCheckHandler(t *testing.T) {
+	router := setupTestRouter()
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var res handlers.HealthResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed to decode health response: %v", err)
+	}
+
+	if res.Status != "healthy" {
+		t.Errorf("expected status 'healthy', got %s", res.Status)
+	}
+	if res.Service != "calculator-service" {
+		t.Errorf("expected service 'calculator-service', got %s", res.Service)
+	}
+}
+
+func TestStaticRouteFallback(t *testing.T) {
+	tempDir := t.TempDir()
+	indexPath := filepath.Join(tempDir, "index.html")
+	_ = os.WriteFile(indexPath, []byte("<html><body>Mock SPA</body></html>"), 0644)
+	assetPath := filepath.Join(tempDir, "test.css")
+	_ = os.WriteFile(assetPath, []byte("body { color: red; }"), 0644)
+
+	router := api.SetupRouter(tempDir)
+
+	// Test serving asset directly
+	req1, _ := http.NewRequest(http.MethodGet, "/test.css", nil)
+	w1 := httptest.NewRecorder()
+	router.ServeHTTP(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Errorf("expected 200 for static asset, got %d", w1.Code)
+	}
+
+	// Test fallback to index.html for client-side routing
+	req2, _ := http.NewRequest(http.MethodGet, "/calculator/settings", nil)
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Errorf("expected 200 fallback to index.html, got %d", w2.Code)
+	}
+
+	// Test 404 for missing /api routes
+	req3, _ := http.NewRequest(http.MethodGet, "/api/v1/nonexistent", nil)
+	w3 := httptest.NewRecorder()
+	router.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusNotFound {
+		t.Errorf("expected 404 for unknown api endpoint, got %d", w3.Code)
 	}
 }

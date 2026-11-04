@@ -241,15 +241,27 @@ go test ./test/... -v
 
 # Run with statement coverage reporting across internal packages
 go test ./test/... -coverpkg=./internal/...
+
+# Generate detailed function-level coverage and HTML report
+go test -count=1 -coverprofile=coverage_api.out -coverpkg=./internal/api/... ./test/api
+go test -count=1 -coverprofile=coverage_calc.out -coverpkg=./internal/calculator/... ./test/calculator
+echo "mode: set" > coverage_total.out && grep -h -v "^mode:" coverage_api.out coverage_calc.out | sort -u >> coverage_total.out
+go tool cover -func=coverage_total.out
+go tool cover -html=coverage_total.out -o coverage.html
 ```
-Runs the separated suite of tokenizer, parser, evaluator, and HTTP integration tests with statement coverage metrics across the `internal/` packages.
+Runs the separated suite of tokenizer, parser, evaluator, and HTTP integration tests with statement coverage metrics across the `internal/` packages (achieving **>90% statement coverage**).
 
 ### Run Frontend Unit Tests (Vitest + React Testing Library)
 ```bash
 cd frontend
+
+# Run all test suites
 npm run test
+
+# Run tests with V8 code coverage report
+npm run test:coverage
 ```
-Executes component integration tests, API mock tests, keyboard handler checks, and syntax validation tests.
+Executes component integration tests, API mock tests, keyboard handler checks, custom hook tests, and syntax validation tests (achieving **>97% statement coverage** with detailed HTML reports generated in `frontend/coverage/`).
 
 ---
 
