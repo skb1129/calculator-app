@@ -153,18 +153,22 @@ calculator-app/
 │   ├── api/
 │   │   ├── handlers/
 │   │   │   ├── calculator.go       # POST /api/v1/calculate handler
-│   │   │   ├── calculator_test.go  # Handlers integration test suite
 │   │   │   └── health.go           # GET /api/v1/health handler
 │   │   ├── middleware/
 │   │   │   └── cors.go             # CORS configuration middleware
 │   │   └── routes.go               # Router registry & static SPA routing
 │   └── calculator/
 │       ├── evaluator.go            # RPN stack evaluator & precision formatter
-│       ├── evaluator_test.go       # Mathematical engine unit test suite
 │       ├── lexer.go                # Tokenizer & unary context resolver
-│       ├── lexer_test.go           # Lexical analysis unit test suite
 │       ├── parser.go               # Shunting-yard infix-to-RPN parser
 │       └── types.go                # Token definitions & error types
+├── test/                           # Separated backend test suite
+│   ├── api/
+│   │   └── handlers_test.go        # HTTP handlers integration test suite
+│   └── calculator/
+│       ├── evaluator_test.go       # Mathematical engine unit test suite
+│       ├── lexer_test.go           # Lexical analysis unit test suite
+│       └── parser_test.go          # Infix-to-RPN parser unit test suite
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -229,11 +233,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. The Vite de
 
 ## Testing
 
-### Run Backend Unit Tests (Go)
+### Run Backend Unit & Integration Tests (Go)
 ```bash
-go test ./... -v -cover
+# Run all backend tests
+go test ./test/... -v
+
+# Run with statement coverage reporting across internal packages
+go test ./test/... -coverpkg=./internal/...
 ```
-Runs the full suite of tokenizer, parser, evaluator, and HTTP integration tests with statement coverage metrics.
+Runs the separated suite of tokenizer, parser, evaluator, and HTTP integration tests with statement coverage metrics across the `internal/` packages.
 
 ### Run Frontend Unit Tests (Vitest + React Testing Library)
 ```bash

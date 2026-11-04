@@ -1,8 +1,10 @@
-package calculator
+package calculator_test
 
 import (
 	"math"
 	"testing"
+
+	"github.com/skb1129/calculator-app/internal/calculator"
 )
 
 func TestCalculateBasicOperations(t *testing.T) {
@@ -25,7 +27,7 @@ func TestCalculateBasicOperations(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.expression, func(t *testing.T) {
-			res, err := Calculate(tc.expression)
+			res, err := calculator.Calculate(tc.expression)
 			if err != nil {
 				t.Fatalf("unexpected error for %q: %v", tc.expression, err)
 			}
@@ -56,7 +58,7 @@ func TestCalculatePrecedenceAndAssociativity(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := Calculate(tc.expression)
+			res, err := calculator.Calculate(tc.expression)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -84,7 +86,7 @@ func TestCalculateUnaryMinus(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.expression, func(t *testing.T) {
-			res, err := Calculate(tc.expression)
+			res, err := calculator.Calculate(tc.expression)
 			if err != nil {
 				t.Fatalf("unexpected error for %q: %v", tc.expression, err)
 			}
@@ -109,7 +111,7 @@ func TestCalculatePercentage(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.expression, func(t *testing.T) {
-			res, err := Calculate(tc.expression)
+			res, err := calculator.Calculate(tc.expression)
 			if err != nil {
 				t.Fatalf("unexpected error for %q: %v", tc.expression, err)
 			}
@@ -134,7 +136,7 @@ func TestCalculateSquareRoot(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.expression, func(t *testing.T) {
-			res, err := Calculate(tc.expression)
+			res, err := calculator.Calculate(tc.expression)
 			if err != nil {
 				t.Fatalf("unexpected error for %q: %v", tc.expression, err)
 			}
@@ -146,7 +148,7 @@ func TestCalculateSquareRoot(t *testing.T) {
 }
 
 func TestCalculateFloatingPointPrecision(t *testing.T) {
-	res, err := Calculate("0.1 + 0.2")
+	res, err := calculator.Calculate("0.1 + 0.2")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -156,13 +158,8 @@ func TestCalculateFloatingPointPrecision(t *testing.T) {
 }
 
 func TestCalculateComplexExpression(t *testing.T) {
-	// (15 + 5 * 2^3) / sqrt(16) - 10%
-	// = (15 + 5 * 8) / 4 - 0.1
-	// = (15 + 40) / 4 - 0.1
-	// = 55 / 4 - 0.1
-	// = 13.75 - 0.1 = 13.65
 	expr := "(15 + 5 * 2^3) / sqrt(16) - 10%"
-	res, err := Calculate(expr)
+	res, err := calculator.Calculate(expr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -181,25 +178,25 @@ func TestCalculateErrors(t *testing.T) {
 		expression string
 		errorCode  string
 	}{
-		{"Division by zero", "10 / 0", ErrCodeDivisionByZero},
-		{"Division by zero in subexpression", "5 / (3 - 3)", ErrCodeDivisionByZero},
-		{"Square root of negative number", "sqrt(-9)", ErrCodeMathDomain},
-		{"Square root of negative in subexpression", "sqrt(2 - 10)", ErrCodeMathDomain},
-		{"Unmatched opening parenthesis", "(2 + 3", ErrCodeUnmatchedParen},
-		{"Unmatched closing parenthesis", "2 + 3)", ErrCodeUnmatchedParen},
-		{"Empty expression", "", ErrCodeEmptyExpr},
-		{"Negative base to fractional power", "(-4) ^ 0.5", ErrCodeMathDomain},
+		{"Division by zero", "10 / 0", calculator.ErrCodeDivisionByZero},
+		{"Division by zero in subexpression", "5 / (3 - 3)", calculator.ErrCodeDivisionByZero},
+		{"Square root of negative number", "sqrt(-9)", calculator.ErrCodeMathDomain},
+		{"Square root of negative in subexpression", "sqrt(2 - 10)", calculator.ErrCodeMathDomain},
+		{"Unmatched opening parenthesis", "(2 + 3", calculator.ErrCodeUnmatchedParen},
+		{"Unmatched closing parenthesis", "2 + 3)", calculator.ErrCodeUnmatchedParen},
+		{"Empty expression", "", calculator.ErrCodeEmptyExpr},
+		{"Negative base to fractional power", "(-4) ^ 0.5", calculator.ErrCodeMathDomain},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := Calculate(tc.expression)
+			_, err := calculator.Calculate(tc.expression)
 			if err == nil {
 				t.Fatalf("expected error for %q, got nil", tc.expression)
 			}
-			calcErr, ok := err.(*CalculationError)
+			calcErr, ok := err.(*calculator.CalculationError)
 			if !ok {
-				t.Fatalf("expected *CalculationError, got %T: %v", err, err)
+				t.Fatalf("expected *calculator.CalculationError, got %T: %v", err, err)
 			}
 			if calcErr.Code != tc.errorCode {
 				t.Errorf("expected error code %s, got %s (msg: %s)", tc.errorCode, calcErr.Code, calcErr.Message)
