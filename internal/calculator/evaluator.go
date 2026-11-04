@@ -33,43 +33,25 @@ func Evaluate(rpn []Token) (float64, string, error) {
 
 		case TokenPercentage:
 			if len(stack) < 1 {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Missing operand for percentage at position %d", token.Position),
-					Code:     ErrCodeInvalidSyntax,
-					Position: token.Position,
-				}
+				return 0, "", missingOperandError("%", token.Position)
 			}
-			a := stack[len(stack)-1]
-			stack[len(stack)-1] = a / 100.0
+			stack[len(stack)-1] /= 100.0
 
 		case TokenUnaryMinus:
 			if len(stack) < 1 {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Missing operand for unary minus at position %d", token.Position),
-					Code:     ErrCodeInvalidSyntax,
-					Position: token.Position,
-				}
+				return 0, "", missingOperandError("-", token.Position)
 			}
-			a := stack[len(stack)-1]
-			stack[len(stack)-1] = -a
+			stack[len(stack)-1] = -stack[len(stack)-1]
 
 		case TokenUnaryPlus:
 			if len(stack) < 1 {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Missing operand for unary plus at position %d", token.Position),
-					Code:     ErrCodeInvalidSyntax,
-					Position: token.Position,
-				}
+				return 0, "", missingOperandError("+", token.Position)
 			}
-			// Unary plus is a no-op: +a = a
+			// Unary plus is identity: +a = a
 
 		case TokenSqrt:
 			if len(stack) < 1 {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Missing operand for square root at position %d", token.Position),
-					Code:     ErrCodeInvalidSyntax,
-					Position: token.Position,
-				}
+				return 0, "", missingOperandError("sqrt", token.Position)
 			}
 			a := stack[len(stack)-1]
 			if a < 0 {
@@ -83,71 +65,17 @@ func Evaluate(rpn []Token) (float64, string, error) {
 
 		case TokenPlus, TokenMinus, TokenMultiply, TokenDivide, TokenPower:
 			if len(stack) < 2 {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Missing operand for operator '%s' at position %d", token.Value, token.Position),
-					Code:     ErrCodeInvalidSyntax,
-					Position: token.Position,
-				}
+				return 0, "", missingOperandError(token.Value, token.Position)
 			}
 
 			b := stack[len(stack)-1]
 			a := stack[len(stack)-2]
 			stack = stack[:len(stack)-2]
 
-			var res float64
-			switch token.Type {
-			case TokenPlus:
-				res = a + b
-
-			case TokenMinus:
-				res = a - b
-
-			case TokenMultiply:
-				res = a * b
-
-			case TokenDivide:
-				if math.Abs(b) < 1e-15 {
-					return 0, "", &CalculationError{
-						Message:  fmt.Sprintf("Division by zero at position %d", token.Position),
-						Code:     ErrCodeDivisionByZero,
-						Position: token.Position,
-					}
-				}
-				res = a / b
-
-			case TokenPower:
-				if a == 0 && b < 0 {
-					return 0, "", &CalculationError{
-						Message:  fmt.Sprintf("Zero cannot be raised to negative power at position %d", token.Position),
-						Code:     ErrCodeDivisionByZero,
-						Position: token.Position,
-					}
-				}
-				if a < 0 && b != math.Trunc(b) {
-					return 0, "", &CalculationError{
-						Message:  fmt.Sprintf("Negative base (%v) cannot be raised to fractional power (%v) at position %d", a, b, token.Position),
-						Code:     ErrCodeMathDomain,
-						Position: token.Position,
-					}
-				}
-				res = math.Pow(a, b)
+			res, err := applyBinaryOp(token.Type, a, b, token.Position)
+			if err != nil {
+				return 0, "", err
 			}
-
-			if math.IsNaN(res) {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Mathematical operation produced undefined result (NaN) at position %d", token.Position),
-					Code:     ErrCodeMathDomain,
-					Position: token.Position,
-				}
-			}
-			if math.IsInf(res, 0) {
-				return 0, "", &CalculationError{
-					Message:  fmt.Sprintf("Calculation result overflowed at position %d", token.Position),
-					Code:     ErrCodeMathOverflow,
-					Position: token.Position,
-				}
-			}
-
 			stack = append(stack, res)
 
 		default:
@@ -171,6 +99,77 @@ func Evaluate(rpn []Token) (float64, string, error) {
 	return cleaned, formatted, nil
 }
 
+func missingOperandError(op string, pos int) *CalculationError {
+	return &CalculationError{
+		Message:  fmt.Sprintf("Missing operand for operator '%s' at position %d", op, pos),
+		Code:     ErrCodeInvalidSyntax,
+		Position: pos,
+	}
+}
+
+func applyBinaryOp(op TokenType, a, b float64, pos int) (float64, error) {
+	switch op {
+	case TokenPlus:
+		return a + b, nil
+
+	case TokenMinus:
+		return a - b, nil
+
+	case TokenMultiply:
+		return a * b, nil
+
+	case TokenDivide:
+		if math.Abs(b) < 1e-15 {
+			return 0, &CalculationError{
+				Message:  fmt.Sprintf("Division by zero at position %d", pos),
+				Code:     ErrCodeDivisionByZero,
+				Position: pos,
+			}
+		}
+		return a / b, nil
+
+	case TokenPower:
+		if a == 0 && b < 0 {
+			return 0, &CalculationError{
+				Message:  fmt.Sprintf("Zero cannot be raised to negative power at position %d", pos),
+				Code:     ErrCodeDivisionByZero,
+				Position: pos,
+			}
+		}
+		if a < 0 && b != math.Trunc(b) {
+			return 0, &CalculationError{
+				Message:  fmt.Sprintf("Negative base (%v) cannot be raised to fractional power (%v) at position %d", a, b, pos),
+				Code:     ErrCodeMathDomain,
+				Position: pos,
+			}
+		}
+
+		res := math.Pow(a, b)
+		if math.IsNaN(res) {
+			return 0, &CalculationError{
+				Message:  fmt.Sprintf("Mathematical operation produced undefined result (NaN) at position %d", pos),
+				Code:     ErrCodeMathDomain,
+				Position: pos,
+			}
+		}
+		if math.IsInf(res, 0) {
+			return 0, &CalculationError{
+				Message:  fmt.Sprintf("Calculation result overflowed at position %d", pos),
+				Code:     ErrCodeMathOverflow,
+				Position: pos,
+			}
+		}
+		return res, nil
+
+	default:
+		return 0, &CalculationError{
+			Message:  fmt.Sprintf("Unsupported operator '%s' at position %d", op, pos),
+			Code:     ErrCodeInvalidSyntax,
+			Position: pos,
+		}
+	}
+}
+
 // FormatResult rounds float values to prevent 64-bit IEEE representation artifacts (e.g. 0.1 + 0.2).
 func FormatResult(val float64) (float64, string) {
 	rounded := math.Round(val*1e12) / 1e12
@@ -183,14 +182,12 @@ func FormatResult(val float64) (float64, string) {
 
 // Calculate parses and evaluates a raw expression string.
 func Calculate(expression string) (*CalculationResult, error) {
-	lexer := NewLexer(expression)
-	tokens, err := lexer.Tokenize()
+	tokens, err := NewLexer(expression).Tokenize()
 	if err != nil {
 		return nil, err
 	}
 
-	parser := NewParser(tokens)
-	rpn, err := parser.Parse()
+	rpn, err := NewParser(tokens).Parse()
 	if err != nil {
 		return nil, err
 	}

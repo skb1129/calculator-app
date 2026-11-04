@@ -15,16 +15,11 @@ type Lexer struct {
 
 // NewLexer creates a new Lexer instance.
 func NewLexer(input string) *Lexer {
-	return &Lexer{
-		input: []rune(input),
-		pos:   0,
-	}
+	return &Lexer{input: []rune(input)}
 }
 
 // Tokenize processes the entire input and returns tokens or a CalculationError.
 func (l *Lexer) Tokenize() ([]Token, error) {
-	var tokens []Token
-
 	if len(strings.TrimSpace(string(l.input))) == 0 {
 		return nil, &CalculationError{
 			Message:  "Expression cannot be empty",
@@ -32,6 +27,8 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			Position: 0,
 		}
 	}
+
+	var tokens []Token
 
 	for l.pos < len(l.input) {
 		r := l.input[l.pos]
@@ -54,9 +51,6 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			if err != nil {
 				return nil, err
 			}
-
-			// Check for implicit multiplication: e.g. "5(2)" or "5sqrt(4)"
-			// But for number, this is handled when the next token is parsed.
 			tokens = append(tokens, numToken)
 			continue
 		}
@@ -64,19 +58,11 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 		// Operators & Parentheses
 		switch r {
 		case '+':
-			if l.isUnaryContext(prevToken) {
-				tokens = append(tokens, Token{Type: TokenUnaryPlus, Value: "+", Position: startPos})
-			} else {
-				tokens = append(tokens, Token{Type: TokenPlus, Value: "+", Position: startPos})
-			}
+			tokens = append(tokens, Token{Type: l.unaryOrBinary(prevToken, TokenUnaryPlus, TokenPlus), Value: "+", Position: startPos})
 			l.pos++
 
 		case '-':
-			if l.isUnaryContext(prevToken) {
-				tokens = append(tokens, Token{Type: TokenUnaryMinus, Value: "-", Position: startPos})
-			} else {
-				tokens = append(tokens, Token{Type: TokenMinus, Value: "-", Position: startPos})
-			}
+			tokens = append(tokens, Token{Type: l.unaryOrBinary(prevToken, TokenUnaryMinus, TokenMinus), Value: "-", Position: startPos})
 			l.pos++
 
 		case '*', '×':
@@ -92,8 +78,7 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			l.pos++
 
 		case '%':
-			// Percentage is a postfix operator; must follow a number, rparen, or another percentage
-			if prevToken == nil || (prevToken.Type != TokenNumber && prevToken.Type != TokenRParen && prevToken.Type != TokenPercentage) {
+			if !l.canPrecedePercentage(prevToken) {
 				return nil, &CalculationError{
 					Message:  fmt.Sprintf("Invalid position for percentage operator '%%' at index %d", startPos),
 					Code:     ErrCodeInvalidSyntax,
@@ -104,8 +89,7 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			l.pos++
 
 		case '(':
-			// Check for implicit multiplication before '(': e.g. "2(3)" -> "2*(3)" or "(2)(3)" -> "(2)*(3)"
-			if prevToken != nil && (prevToken.Type == TokenNumber || prevToken.Type == TokenRParen || prevToken.Type == TokenPercentage) {
+			if l.needsImplicitMultiply(prevToken) {
 				tokens = append(tokens, Token{Type: TokenMultiply, Value: "*", Position: startPos})
 			}
 			tokens = append(tokens, Token{Type: TokenLParen, Value: "(", Position: startPos})
@@ -116,20 +100,17 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 			l.pos++
 
 		case '√':
-			// Unicode square root symbol
-			if prevToken != nil && (prevToken.Type == TokenNumber || prevToken.Type == TokenRParen || prevToken.Type == TokenPercentage) {
+			if l.needsImplicitMultiply(prevToken) {
 				tokens = append(tokens, Token{Type: TokenMultiply, Value: "*", Position: startPos})
 			}
 			tokens = append(tokens, Token{Type: TokenSqrt, Value: "sqrt", Position: startPos})
 			l.pos++
 
 		default:
-			// Identifier check (e.g. "sqrt")
 			if unicode.IsLetter(r) {
 				ident := l.readIdentifier()
-				lowerIdent := strings.ToLower(ident)
-				if lowerIdent == "sqrt" {
-					if prevToken != nil && (prevToken.Type == TokenNumber || prevToken.Type == TokenRParen || prevToken.Type == TokenPercentage) {
+				if strings.ToLower(ident) == "sqrt" {
+					if l.needsImplicitMultiply(prevToken) {
 						tokens = append(tokens, Token{Type: TokenMultiply, Value: "*", Position: startPos})
 					}
 					tokens = append(tokens, Token{Type: TokenSqrt, Value: "sqrt", Position: startPos})
@@ -154,17 +135,14 @@ func (l *Lexer) Tokenize() ([]Token, error) {
 }
 
 func (l *Lexer) peekNextIsDigit() bool {
-	if l.pos+1 < len(l.input) {
-		return unicode.IsDigit(l.input[l.pos+1])
-	}
-	return false
+	return l.pos+1 < len(l.input) && unicode.IsDigit(l.input[l.pos+1])
 }
 
-func (l *Lexer) isUnaryContext(prevToken *Token) bool {
-	if prevToken == nil {
+func (l *Lexer) isUnaryContext(prev *Token) bool {
+	if prev == nil {
 		return true
 	}
-	switch prevToken.Type {
+	switch prev.Type {
 	case TokenPlus, TokenMinus, TokenMultiply, TokenDivide, TokenPower,
 		TokenLParen, TokenUnaryMinus, TokenUnaryPlus, TokenSqrt:
 		return true
@@ -173,11 +151,24 @@ func (l *Lexer) isUnaryContext(prevToken *Token) bool {
 	}
 }
 
+func (l *Lexer) unaryOrBinary(prev *Token, unary, binary TokenType) TokenType {
+	if l.isUnaryContext(prev) {
+		return unary
+	}
+	return binary
+}
+
+func (l *Lexer) needsImplicitMultiply(prev *Token) bool {
+	return prev != nil && (prev.Type == TokenNumber || prev.Type == TokenRParen || prev.Type == TokenPercentage)
+}
+
+func (l *Lexer) canPrecedePercentage(prev *Token) bool {
+	return prev != nil && (prev.Type == TokenNumber || prev.Type == TokenRParen || prev.Type == TokenPercentage)
+}
+
 func (l *Lexer) readNumber() (Token, error) {
 	startPos := l.pos
-	hasDot := false
-	hasExp := false
-
+	hasDot, hasExp := false, false
 	var sb strings.Builder
 
 	for l.pos < len(l.input) {
@@ -201,8 +192,6 @@ func (l *Lexer) readNumber() (Token, error) {
 			hasExp = true
 			sb.WriteRune(r)
 			l.pos++
-
-			// Check for optional +/- in scientific notation exponent
 			if l.pos < len(l.input) && (l.input[l.pos] == '+' || l.input[l.pos] == '-') {
 				sb.WriteRune(l.input[l.pos])
 				l.pos++
