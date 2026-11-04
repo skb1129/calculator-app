@@ -108,7 +108,8 @@ In production, a multi-stage `Dockerfile` compiles the React application into st
 
 #### Error Codes:
 - `EMPTY_EXPRESSION`: Expression string was empty or whitespace.
-- `INVALID_SYNTAX`: Malformed numbers, invalid tokens, or consecutive invalid operators.
+- `EXPRESSION_TOO_LONG`: Expression exceeded the maximum length of 1,000 characters.
+- `INVALID_SYNTAX`: Disallowed characters/keywords (enforced via handler regex) or malformed arithmetic syntax.
 - `UNMATCHED_PARENTHESIS`: Mismatched opening `(` or closing `)` bracket.
 - `DIVISION_BY_ZERO`: Division by zero ($x / 0$).
 - `MATH_DOMAIN_ERROR`: Real-number domain violations (e.g., $\sqrt{-9}$ or negative numbers with fractional powers).

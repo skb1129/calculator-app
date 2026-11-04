@@ -2,12 +2,24 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/skb1129/calculator-app/internal/calculator"
 )
+
+// MaxExpressionLength defines the maximum allowed character length for an expression string.
+const MaxExpressionLength = 1000
+
+// ErrCodeExpressionTooLong is returned when an input expression exceeds MaxExpressionLength.
+const ErrCodeExpressionTooLong = "EXPRESSION_TOO_LONG"
+
+// ValidExpressionRegex enforces that expressions contain only supported mathematical tokens, numbers, and functions.
+var ValidExpressionRegex = regexp.MustCompile(`(?i)^([0-9\s+\-*/^%().×÷√]|sqrt|[0-9]+(\.[0-9]+)?e[+-]?[0-9]+)+$`)
 
 // CalculateRequest models incoming expression payload.
 type CalculateRequest struct {
@@ -44,13 +56,42 @@ func Calculate(c *gin.Context) {
 		return
 	}
 
+	trimmed := strings.TrimSpace(req.Expression)
+	if len(trimmed) == 0 {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Success: false,
+			Error:   "Expression cannot be empty",
+			Code:    calculator.ErrCodeEmptyExpr,
+		})
+		return
+	}
+
+	// 1. Max length validation
+	if len(req.Expression) > MaxExpressionLength {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Expression exceeds maximum allowed length of %d characters", MaxExpressionLength),
+			Code:    ErrCodeExpressionTooLong,
+		})
+		return
+	}
+
+	// 2. Regex-based pattern validation
+	if !ValidExpressionRegex.MatchString(trimmed) {
+		c.JSON(http.StatusBadRequest, ErrorResponse{
+			Success: false,
+			Error:   "Expression contains invalid characters or unsupported keywords",
+			Code:    calculator.ErrCodeInvalidSyntax,
+		})
+		return
+	}
+
 	start := time.Now()
 	res, err := calculator.Calculate(req.Expression)
 	durationMs := float64(time.Since(start).Nanoseconds()) / 1e6
 
 	if err != nil {
-		var calcErr *calculator.CalculationError
-		if errors.As(err, &calcErr) {
+		if calcErr, ok := errors.AsType[*calculator.CalculationError](err); ok {
 			statusCode := http.StatusBadRequest
 			if calcErr.Code == calculator.ErrCodeDivisionByZero ||
 				calcErr.Code == calculator.ErrCodeMathDomain ||
