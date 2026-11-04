@@ -35,7 +35,6 @@ func (p *Parser) Parse() ([]Token, error) {
 			output = append(output, token)
 
 		case TokenPercentage:
-			// Postfix unary operator: applies directly to preceding operand
 			output = append(output, token)
 
 		case TokenUnaryMinus, TokenUnaryPlus:

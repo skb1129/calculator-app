@@ -45,7 +45,7 @@ The backend evaluates expressions using a two-phase architecture:
 3. **RPN Evaluator (`evaluator.go`)**: Employs an operand stack to compute results in $O(n)$ time while checking mathematical invariants (e.g., zero divisors, negative square root domains).
 
 ### 3. Operator Semantics
-- **Percentage (`%`)**: Modeled as a postfix unary operator ($x\% = x / 100$). This ensures mathematical consistency across composite equations: `100 * 15%` evaluates to `15`, and `50 + 10%` evaluates to `50.1`.
+- **Percentage (`%`)**: Consistently represents the percentage of the previous number ($A \times \frac{B}{100}$) across all contexts (e.g. `1000 + 10% = 1100`, `1000 - 10% = 900`, `1000 + (10%) = 1100`, `100 * 15% = 15`), without isolated fraction exceptions. Standalone percentages without a preceding base default to $B / 100$ (`50% = 0.5`).
 - **Exponentiation (`^`)**: Right-associative per standard mathematical conventions ($2^{3^2} = 2^{(3^2)} = 512$).
 - **Square Root (`sqrt` / `√`)**: Supported both as functional calls (`sqrt(16)`) and with Unicode symbols (`√(16)` or `√16`).
 
@@ -59,7 +59,7 @@ In production, a multi-stage `Dockerfile` compiles the React application into st
 | Operation | Operator Syntax | Precedence | Associativity | Example | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Parentheses** | `(`, `)` | 0 (Group) | N/A | `(2 + 3) * 4` | Sub-expression isolation |
-| **Percentage** | `%` | 5 (Postfix) | Left | `50 * 20%` | Evaluates to $x / 100$ |
+| **Percentage** | `%` | 5 (Postfix) | Left | `1000 + 10%`, `100 * 15%` | Always percent of previous number: $A \times (B/100)$ |
 | **Square Root** | `sqrt(x)` or `√(x)` | 5 (Prefix) | Right | `sqrt(144) + 1` | Requires $x \ge 0$ |
 | **Exponentiation** | `^` | 4 (Binary) | Right | `2 ^ 3 ^ 2` | Evaluates right-to-left |
 | **Unary Negation** | `-` | 3 (Prefix) | Right | `-5 + 3`, `4 * -2` | Precedence above binary operators |

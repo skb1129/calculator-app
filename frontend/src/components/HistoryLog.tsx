@@ -43,7 +43,7 @@ export const HistoryLog: React.FC<HistoryLogProps> = ({
       </div>
 
       {/* History item list */}
-      <div className="flex-1 overflow-y-auto mt-3 pr-1 space-y-2.5 max-h-[420px] scrollbar-thin scrollbar-thumb-slate-700">
+      <div className="flex-1 overflow-y-auto mt-3 pr-1 space-y-2.5 max-h-[609px] scrollbar-thin scrollbar-thumb-slate-700">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center text-slate-500">
             <History className="w-8 h-8 mb-2 stroke-1 text-slate-600" />

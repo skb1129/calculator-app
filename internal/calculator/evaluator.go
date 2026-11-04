@@ -25,29 +25,41 @@ func Evaluate(rpn []Token) (float64, string, error) {
 	}
 
 	var stack []float64
+	var lastWasPercent bool
 
 	for _, token := range rpn {
 		switch token.Type {
 		case TokenNumber:
 			stack = append(stack, token.Number)
+			lastWasPercent = false
 
 		case TokenPercentage:
 			if len(stack) < 1 {
 				return 0, "", missingOperandError("%", token.Position)
 			}
-			stack[len(stack)-1] /= 100.0
+			// Percentage always means the percentage of the previous number
+			if len(stack) >= 2 {
+				base := stack[len(stack)-2]
+				pct := stack[len(stack)-1]
+				stack[len(stack)-1] = base * (pct / 100.0)
+			} else {
+				stack[len(stack)-1] /= 100.0
+			}
+			lastWasPercent = true
 
 		case TokenUnaryMinus:
 			if len(stack) < 1 {
 				return 0, "", missingOperandError("-", token.Position)
 			}
 			stack[len(stack)-1] = -stack[len(stack)-1]
+			lastWasPercent = false
 
 		case TokenUnaryPlus:
 			if len(stack) < 1 {
 				return 0, "", missingOperandError("+", token.Position)
 			}
 			// Unary plus is identity: +a = a
+			lastWasPercent = false
 
 		case TokenSqrt:
 			if len(stack) < 1 {
@@ -62,6 +74,7 @@ func Evaluate(rpn []Token) (float64, string, error) {
 				}
 			}
 			stack[len(stack)-1] = math.Sqrt(a)
+			lastWasPercent = false
 
 		case TokenPlus, TokenMinus, TokenMultiply, TokenDivide, TokenPower:
 			if len(stack) < 2 {
@@ -72,10 +85,20 @@ func Evaluate(rpn []Token) (float64, string, error) {
 			a := stack[len(stack)-2]
 			stack = stack[:len(stack)-2]
 
-			res, err := applyBinaryOp(token.Type, a, b, token.Position)
-			if err != nil {
-				return 0, "", err
+			var res float64
+			var err error
+
+			if lastWasPercent && token.Type == TokenMultiply {
+				// Multiplying by a percentage of the base: a * (b% of a) evaluates directly to (b% of a)
+				res = b
+			} else {
+				res, err = applyBinaryOp(token.Type, a, b, token.Position)
+				if err != nil {
+					return 0, "", err
+				}
 			}
+
+			lastWasPercent = false
 			stack = append(stack, res)
 
 		default:

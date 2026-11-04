@@ -169,9 +169,14 @@ func TestParserSquareRootAndPercentage(t *testing.T) {
 			expectedRPN: []string{"9", "16", string(calculator.TokenPlus), string(calculator.TokenSqrt)},
 		},
 		{
-			name:        "Percentage postfix operator",
+			name:        "Percentage postfix operator in multiplication",
 			expression:  "100 * 15%",
 			expectedRPN: []string{"100", "15", string(calculator.TokenPercentage), string(calculator.TokenMultiply)},
+		},
+		{
+			name:        "Percentage after addition",
+			expression:  "1000 + 10%",
+			expectedRPN: []string{"1000", "10", string(calculator.TokenPercentage), string(calculator.TokenPlus)},
 		},
 	}
 

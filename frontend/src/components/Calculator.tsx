@@ -26,6 +26,7 @@ export const Calculator: React.FC = () => {
   const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
 
   const sampleExpressions = [
+    '1000 + 10%',
     '(15 + 5 * 2^3) / sqrt(16) - 10%',
     '100 * 15% + 50',
     '2 ^ 3 ^ 2',

@@ -99,18 +99,23 @@ func TestCalculateUnaryMinus(t *testing.T) {
 
 func TestCalculatePercentage(t *testing.T) {
 	tests := []struct {
+		name       string
 		expression string
 		expected   float64
 	}{
-		{"100 * 15%", 15},
-		{"50 + 10%", 50.1},
-		{"200 - 50%", 199.5},
-		{"10% + 20%", 0.3},
-		{"(100 + 20)%", 1.2},
+		{"Additive percentage addition", "1000 + 10%", 1100},
+		{"Additive percentage subtraction", "1000 - 10%", 900},
+		{"Additive percentage 50 + 10%", "50 + 10%", 55},
+		{"Additive percentage 200 - 50%", "200 - 50%", 100},
+		{"Multiplication with percentage", "100 * 15%", 15},
+		{"Division with percentage of base", "200 / 10%", 10},
+		{"Parenthesized expression percentage", "(100 + 20)%", 1.2},
+		{"Percentage in parentheses resolves to base percent", "1000 + (10%)", 1100},
+		{"Chained additive percentage", "1000 + 10% + 5%", 1155}, // 1100 + 5% = 1155
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.expression, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			res, err := calculator.Calculate(tc.expression)
 			if err != nil {
 				t.Fatalf("unexpected error for %q: %v", tc.expression, err)
@@ -158,17 +163,21 @@ func TestCalculateFloatingPointPrecision(t *testing.T) {
 }
 
 func TestCalculateComplexExpression(t *testing.T) {
+	// (15 + 5 * 2^3) / sqrt(16) - 10%
+	// = (15 + 40) / 4 - 10%
+	// = 13.75 - (13.75 * 0.10)
+	// = 13.75 - 1.375 = 12.375
 	expr := "(15 + 5 * 2^3) / sqrt(16) - 10%"
 	res, err := calculator.Calculate(expr)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	expected := 13.65
+	expected := 12.375
 	if math.Abs(res.Result-expected) > 1e-9 {
 		t.Errorf("expected %v, got %v", expected, res.Result)
 	}
-	if res.Formatted != "13.65" {
-		t.Errorf("expected formatted '13.65', got %q", res.Formatted)
+	if res.Formatted != "12.375" {
+		t.Errorf("expected formatted '12.375', got %q", res.Formatted)
 	}
 }
 

@@ -49,12 +49,12 @@ func TestCalculateHandlerSuccess(t *testing.T) {
 		t.Errorf("expected success true, got false")
 	}
 
-	// 10 + 5*8 - 8 + 0.2 = 10 + 40 - 8 + 0.2 = 42.2
-	if res.Result != 42.2 {
-		t.Errorf("expected result 42.2, got %v", res.Result)
+	// 10 + 5*8 - 8 + 20% = 10 + 40 - 8 + 20% = 42 + (42 * 0.20) = 42 + 8.4 = 50.4
+	if res.Result != 50.4 {
+		t.Errorf("expected result 50.4, got %v", res.Result)
 	}
-	if res.Formatted != "42.2" {
-		t.Errorf("expected formatted '42.2', got %s", res.Formatted)
+	if res.Formatted != "50.4" {
+		t.Errorf("expected formatted '50.4', got %s", res.Formatted)
 	}
 }
 
@@ -155,7 +155,7 @@ func TestCalculateHandlerValidFormats(t *testing.T) {
 	}{
 		{"Unicode operators", "6 × 7 ÷ 2 + √(49)", 28},
 		{"Scientific notation", "1e3 + 50", 1050},
-		{"Nested functions and percentages", "sqrt(100) + 50%", 10.5},
+		{"Nested functions and percentages", "sqrt(100) + 50%", 15},
 	}
 
 	for _, tc := range tests {
