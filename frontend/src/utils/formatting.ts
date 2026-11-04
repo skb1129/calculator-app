@@ -1,6 +1,9 @@
 export function formatTimestamp(isoString: string): string {
   try {
     const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      return isoString;
+    }
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   } catch {
     return isoString;
