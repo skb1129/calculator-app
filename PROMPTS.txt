@@ -1,0 +1,20 @@
+PROMPT 1:
+Create an implementation plan for a full-stack calculator app with the frontend built using React SPA and backend on a GoLang Gin service. The calculations should be done via an API call from frontend to backend.
+The operations that this app does include Addition, Subtraction, Multiplication, Division, Exponentiation, Square Root, Percentage.
+The input would always be a long string that includes multiple operands with multiple operations. The API returns the result for that string and the frontend displays that result and moves the calculation to an in-memory history log.
+The frontend should display an intuitive UI for entering input and displaying results, it should have input validation and error handling and a responsive design so it works across all kinds of display sizes.
+The backend should expose endpoints for calculator operations, validate input and handle edge cases and return results in JSON format.
+The complete codebase must be clean, readable, and idiomatic. It should have unit tests covering key functionality for both layers. There should be proper documentation, setup instructions, API usage, and design rationale. It should also have a dockerfile for full-stack deployment.
+
+PROMPT 2:
+Execute implementation plan
+
+PROMPT 3:
+Add unit tests for all components, hooks, services and utils in the frontend application.
+Add unit tests for calculator/parser.go in the backend application.
+
+PROMPT 4:
+Add a Regex based validation to the expression that comes in the request on the handler level, along with a max length limit, also update unit tests according to this change
+
+PROMPT 5:
+Add setup to generate code coverage reports for both frontend and backend applications
